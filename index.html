@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Message API Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        #message-form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+        }
+        #clear-btn {
+            border-radius: 4px;
+            background-color: #e74c3c;
+            margin-left: 10px;
+        }
+        #messages {
+            list-style-type: none;
+            padding: 0;
+        }
+        .message-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        .api-info {
+            font-size: 0.9em;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .api-endpoint {
+            font-family: monospace;
+            background-color: #eee;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cloud Message API Demo</h1>
+    
+    <div class="container">
+        <h2>Send a Message</h2>
+        <div id="message-form">
+            <input type="text" id="message-input" placeholder="Type a message..." />
+            <button id="send-btn">Send</button>
+            <button id="clear-btn">Clear All</button>
+        </div>
+        
+        <h2>Messages</h2>
+        <ul id="messages">
+            <li class="message-item">Loading messages...</li>
+        </ul>
+    </div>
+    
+    <div class="container api-info">
+        <h2>API Endpoints</h2>
+        <p>This demo uses Netlify Functions to create a serverless API:</p>
+        <ul>
+            <li><span class="api-endpoint">GET /.netlify/functions/messages</span> - Get all messages</li>
+            <li><span class="api-endpoint">POST /.netlify/functions/messages</span> - Create a new message</li>
+            <li><span class="api-endpoint">DELETE /.netlify/functions/messages</span> - Clear all messages</li>
+        </ul>
+        <p>Learn more about cloud serverless functions and how they enable scalable applications!</p>
+    </div>
+
+    <script>
+        // Store messages in memory until page refresh
+        // In a real app, these would be fetched from the serverless function
+        let messages = [];
+
+        // DOM elements
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const messagesList = document.getElementById('messages');
+
+        // Fetch messages when page loads
+        fetchMessages();
+
+        // Add event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        clearBtn.addEventListener('click', clearMessages);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Fetch all messages
+        async function fetchMessages() {
+            try {
+                const response = await fetch('/.netlify/functions/messages');
+                const data = await response.json();
+                messages = data.messages;
+                renderMessages();
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                messagesList.innerHTML = '<li class="message-item">Error loading messages. Please try again.</li>';
+            }
+        }
+
+        // Send a new message
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content) return;
+
+            try {
+                const response = await fetch('/.netlify/functions/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                const data = await response.json();
+                messages.push(data.data);
+                messageInput.value = '';
+                renderMessages();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        // Clear all messages
+        async function clearMessages() {
+            try {
+                await fetch('/.netlify/functions/messages', {
+                    method: 'DELETE'
+                });
+                messages = [];
+                renderMessages();
+            } catch (error) {
+                console.error('Error clearing messages:', error);
+                alert('Failed to clear messages. Please try again.');
+            }
+        }
+
+        // Render messages to the DOM
+        function renderMessages() {
+            if (messages.length === 0) {
+                messagesList.innerHTML = '<li class="message-item">No messages yet. Add one above!</li>';
+                return;
+            }
+
+            messagesList.innerHTML = messages
+                .map(msg => `<li class="message-item">${msg.content}</li>`)
+                .join('');
+        }
+    </script>
+</body>
+</html>
